@@ -288,10 +288,16 @@ def build_ui() -> gr.Blocks:
             )
             model = gr.Dropdown(
                 label="Model", choices=ALL_MODELS, value=DEFAULT_MODEL, scale=2,
-                info="Flash Lite: nhiều lượt free nhất. Flash: chất lượng cao hơn, ít lượt hơn. "
-                     "Giới hạn free đổi theo tài khoản — xem tại aistudio.google.com.",
+                info="Flash Lite: nhiều lượt free nhất. Flash/Pro: chất lượng cao hơn, ít lượt hơn.",
             )
             load_models_btn = gr.Button("🔄 Tải model", scale=1)
+
+        gr.Markdown(
+            "Rate limit (RPM/TPM/RPD) khác nhau theo model và theo tài khoản, không lấy được "
+            "qua API — xem số thật của bạn tại "
+            "[AI Studio · Rate limits](https://aistudio.google.com/app/plan_information) hoặc "
+            "[tài liệu Gemini](https://ai.google.dev/gemini-api/docs/rate-limits)."
+        )
 
         with gr.Row():
             media_res = gr.Radio(
