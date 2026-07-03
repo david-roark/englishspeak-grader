@@ -18,5 +18,6 @@ if not exist ".env" (
 )
 
 echo Khoi dong app... lan dau uv se tai thu vien, hoi lau mot chut.
-uv run app.py
+REM --no-dev: chi cai thu vien chay app, bo qua nhom dev (pytest...) de nhe may.
+uv run --no-dev app.py
 pause

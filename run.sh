@@ -20,4 +20,5 @@ if [ ! -f .env ]; then
 fi
 
 echo ">> Khởi động app... (lần đầu uv sẽ tải thư viện, hơi lâu một chút)"
-uv run app.py
+# --no-dev: chỉ cài thư viện chạy app, bỏ qua nhóm dev (pytest...) để nhẹ máy.
+uv run --no-dev app.py
