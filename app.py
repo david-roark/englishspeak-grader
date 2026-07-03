@@ -275,17 +275,34 @@ def save_rubric(key: str, name: str, description: str, scale_note: str, table):
     if key in DEFAULT_RUBRICS:
         return f"⚠️ Mã '{key}' trùng rubric mặc định. Dùng mã khác.", gr.update()
 
+    # Gradio có thể trả DataFrame (type="pandas") hoặc list-of-lists (type="array").
+    if hasattr(table, "values"):  # pandas DataFrame
+        rows = table.values.tolist()
+    elif table is None:
+        rows = []
+    else:
+        rows = list(table)
+
+    def _num(v, default: float) -> float:
+        """Đọc số an toàn: bỏ qua ô rỗng / NaN, trả default."""
+        if v is None:
+            return default
+        s = str(v).strip()
+        if s == "" or s.lower() == "nan":
+            return default
+        return float(s)
+
     criteria = []
-    for row in table:
-        if not row or not str(row[0]).strip():
+    for row in rows:
+        if not row or str(row[0]).strip() in ("", "nan"):
             continue
         try:
             criteria.append(
                 Criterion(
                     name=str(row[0]).strip(),
-                    description=str(row[1]).strip() if len(row) > 1 else "",
-                    min_score=float(row[2]) if len(row) > 2 and row[2] != "" else 0.0,
-                    max_score=float(row[3]) if len(row) > 3 and row[3] != "" else 10.0,
+                    description=str(row[1]).strip() if len(row) > 1 and str(row[1]).strip().lower() != "nan" else "",
+                    min_score=_num(row[2] if len(row) > 2 else None, 0.0),
+                    max_score=_num(row[3] if len(row) > 3 else None, 10.0),
                 )
             )
         except (ValueError, TypeError):
@@ -445,6 +462,7 @@ def build_ui() -> gr.Blocks:
                 r_table = gr.Dataframe(
                     headers=["Tên tiêu chí", "Mô tả", "Điểm min", "Điểm max"],
                     datatype=["str", "str", "number", "number"],
+                    type="array",  # trả về list-of-lists (Gradio 6 mặc định "pandas")
                     row_count=(4, "dynamic"),
                     column_count=(4, "fixed"),
                     label="Tiêu chí",
