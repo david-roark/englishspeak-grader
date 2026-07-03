@@ -33,12 +33,15 @@ vượt giới hạn token/phút của free tier).
 Không cần cài Python thủ công. Script sẽ tự cài `uv` (trình quản lý Python siêu nhẹ)
 rồi tự tải đúng thư viện.
 
-**Windows:** double-click `run.bat`
+| Hệ điều hành | Cách chạy |
+|---|---|
+| **Windows** | Double-click `run.bat` |
+| **macOS** | Double-click `run.command` trong Finder |
+| **Linux** | Mở Terminal trong thư mục này rồi chạy `./run.sh` |
 
-**macOS / Linux:** mở Terminal trong thư mục này rồi:
-```bash
-./run.sh
-```
+> **macOS lần đầu:** nếu double-click báo *"không thể mở vì từ nhà phát triển chưa xác định"*,
+> bấm chuột phải vào `run.command` → **Open** → **Open** một lần; các lần sau double-click chạy bình thường.
+> Nếu báo *"permission denied"*, mở Terminal trong thư mục này và chạy `chmod +x run.command` một lần.
 
 Lần đầu chạy sẽ:
 1. Cài `uv` (nếu chưa có).
@@ -47,6 +50,38 @@ Lần đầu chạy sẽ:
 3. Tải thư viện và mở app trong trình duyệt ở `http://127.0.0.1:7860`.
 
 Chạy lại các lần sau rất nhanh vì thư viện đã có sẵn.
+
+## Tạo shortcut truy cập nhanh
+
+Để khỏi phải mở thư mục mỗi lần, tạo lối tắt (có sẵn icon `icon.ico` / `icon.png` trong thư mục).
+
+**Windows**
+1. Chuột phải `run.bat` → **Send to** → **Desktop (create shortcut)**.
+2. Chuột phải shortcut vừa tạo → **Properties** → **Change Icon...** → **Browse** → chọn `icon.ico` → OK.
+3. (Tùy chọn) Đổi tên shortcut thành *Speak Grader*. Có thể kéo vào thanh Taskbar hoặc menu Start để ghim.
+
+**macOS**
+1. Kéo `run.command` vào Dock (thả vào phần bên phải, cạnh Thùng rác) để chạy bằng 1 cú nhấp.
+2. (Tùy chọn) Đổi icon: chọn `run.command` → **Cmd+I** (Get Info); mở `icon.png`, **Cmd+A** rồi **Cmd+C**; bấm vào icon nhỏ góc trên cửa sổ Get Info rồi **Cmd+V**.
+
+**Linux (GNOME/KDE)**
+1. Tạo file `~/.local/share/applications/speak-grader.desktop` với nội dung (sửa `<ĐƯỜNG_DẪN>` thành đường dẫn thật tới thư mục app):
+   ```ini
+   [Desktop Entry]
+   Type=Application
+   Name=Speak Grader
+   Comment=Chấm bài nói tiếng Anh bằng AI
+   Exec=<ĐƯỜNG_DẪN>/run.sh
+   Icon=<ĐƯỜNG_DẪN>/icon.png
+   Terminal=true
+   Categories=Education;
+   ```
+2. Chạy `chmod +x ~/.local/share/applications/speak-grader.desktop`. App sẽ xuất hiện trong menu ứng dụng; kéo ra Desktop hoặc ghim vào thanh tác vụ nếu muốn.
+
+> **Không đóng gói thành file .exe/.app?** Đã cân nhắc dùng PyInstaller, nhưng Gradio kéo theo
+> bộ thư viện web nặng (bản đóng gói ~300MB+) và **không thể build chéo** — muốn có `.exe` phải
+> build trên Windows, muốn `.app` phải build trên macOS. Cách chạy bằng `uv` ở trên nhẹ hơn, luôn
+> cập nhật đúng thư viện, nên được chọn thay cho file đóng gói.
 
 ## Cách dùng
 1. Chọn video bài nói.
@@ -78,6 +113,9 @@ speak-grader/
 │   └── export.py         # Xuất Excel
 ├── data/               # SQLite (tự tạo)
 ├── exports/            # Excel kết quả
-├── run.sh / run.bat    # Khởi động 1 chạm
+├── run.sh              # Khởi động (Linux)
+├── run.command         # Khởi động (macOS, double-click)
+├── run.bat             # Khởi động (Windows, double-click)
+├── icon.png / icon.ico # Icon cho shortcut
 └── pyproject.toml
 ```

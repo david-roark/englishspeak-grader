@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Chạy Speak Grader trên Linux / macOS.
-# Cách dùng: mở Terminal trong thư mục này rồi chạy:  ./run.sh
+# Chạy Speak Grader trên macOS bằng cách DOUBLE-CLICK file này trong Finder.
+# (File .command double-click được; file .sh thì không.)
 set -e
 cd "$(dirname "$0")"
 
@@ -8,7 +8,6 @@ cd "$(dirname "$0")"
 if ! command -v uv >/dev/null 2>&1; then
   echo "Chưa có uv — đang cài đặt (một lần duy nhất)..."
   curl -LsSf https://astral.sh/uv/install.sh | sh
-  # Nạp uv vào PATH cho phiên hiện tại.
   export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 fi
 
