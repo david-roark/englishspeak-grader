@@ -449,10 +449,10 @@ def build_ui() -> gr.Blocks:
                 )
 
             # ---- Tab 2: Rubric tùy chỉnh ------------------------------------ #
-            with gr.Tab("Rubric tùy chỉnh"):
+            with gr.Tab("Tạo rubric"):
                 gr.Markdown(
                     "Tạo rubric riêng của bạn. Mỗi dòng trong bảng là một tiêu chí. "
-                    "Rubric đã lưu sẽ xuất hiện trong danh sách ở tab Chấm bài."
+                    "Rubric đã lưu sẽ xuất hiện ở tab *Chấm bài* và tab *Danh sách rubric*."
                 )
                 with gr.Row():
                     r_key = gr.Textbox(label="Mã (key, không dấu, VD: my_rubric)")
@@ -467,26 +467,48 @@ def build_ui() -> gr.Blocks:
                     column_count=4,  # 4 cột cố định
                     label="Tiêu chí",
                 )
-                with gr.Row():
-                    save_btn = gr.Button("💾 Lưu rubric", variant="primary")
-                    del_key = gr.Textbox(label="Mã rubric cần xóa", scale=2)
-                    del_btn = gr.Button("🗑️ Xóa")
+                save_btn = gr.Button("💾 Lưu rubric", variant="primary")
                 rubric_status = gr.Markdown()
 
-                save_btn.click(
-                    save_rubric,
-                    inputs=[r_key, r_name, r_desc, r_scale, r_table],
-                    outputs=[rubric_status, rubric_dd],
-                )
-                del_btn.click(delete_rubric, inputs=[del_key], outputs=[rubric_status, rubric_dd])
-
-            # ---- Tab 3: Rubric mặc định (xem) ------------------------------- #
-            with gr.Tab("Rubric mặc định"):
+            # ---- Tab 3: Danh sách rubric ------------------------------------ #
+            with gr.Tab("Danh sách rubric"):
                 gr.Markdown(
-                    "Các bộ tiêu chí có sẵn đang dùng để chấm (chỉ xem). "
-                    "Muốn thay đổi thì tạo bản riêng ở tab *Rubric tùy chỉnh*."
+                    "Toàn bộ rubric đang có. Rubric **mặc định** chỉ để xem; "
+                    "rubric **tùy chỉnh** có nút xóa."
                 )
-                gr.Markdown(default_rubrics_markdown())
+                # Đổi giá trị State này -> gr.render vẽ lại danh sách (sau khi lưu/xóa).
+                rubric_refresh = gr.State(0)
+
+                @gr.render(inputs=rubric_refresh)
+                def _render_rubric_list(_tick):
+                    gr.Markdown("#### Rubric mặc định (chỉ xem)")
+                    gr.Markdown(default_rubrics_markdown())
+                    gr.Markdown("#### Rubric tùy chỉnh")
+                    customs = db.list_custom_rubrics()
+                    if not customs:
+                        gr.Markdown("_Chưa có rubric tùy chỉnh nào._")
+                    for _data in customs:
+                        _k = _data["key"]
+                        with gr.Row():
+                            gr.Markdown(
+                                f"**{_data['name']}** · mã `{_k}` · "
+                                f"{len(_data['criteria'])} tiêu chí"
+                            )
+                            _del_b = gr.Button("🗑️ Xóa", variant="stop", scale=0)
+
+                            # Closure giữ key + tick hiện tại; xóa xong bump tick -> vẽ lại.
+                            def _do_delete(k=_k, tick=_tick):
+                                _msg, dd = delete_rubric(k)
+                                return dd, tick + 1
+
+                            _del_b.click(_do_delete, outputs=[rubric_dd, rubric_refresh])
+
+            # Lưu rubric -> cập nhật dropdown tab Chấm bài + vẽ lại Danh sách rubric.
+            save_btn.click(
+                save_rubric,
+                inputs=[r_key, r_name, r_desc, r_scale, r_table],
+                outputs=[rubric_status, rubric_dd],
+            ).then(lambda t: t + 1, inputs=rubric_refresh, outputs=rubric_refresh)
 
             # ---- Tab 4: Tách MP3 -------------------------------------------- #
             with gr.Tab("Tách MP3"):

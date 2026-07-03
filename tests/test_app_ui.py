@@ -132,8 +132,10 @@ def test_các_nút_gắn_đúng_callback(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "")
     demo = app.build_ui()
     wired = {getattr(f.fn, "__name__", None) for f in demo.fns.values()}
+    # delete_rubric giờ nằm trong closure của gr.render (danh sách động) nên
+    # không xuất hiện theo tên ở demo.fns lúc build — nó được test trực tiếp riêng.
     for expected in {
-        "run_grading", "save_rubric", "delete_rubric",
+        "run_grading", "save_rubric",
         "run_extract_mp3", "load_history", "view_history_item", "refresh_models",
     }:
         assert expected in wired, f"Callback '{expected}' chưa được gắn vào UI"
