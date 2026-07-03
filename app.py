@@ -463,8 +463,8 @@ def build_ui() -> gr.Blocks:
                     headers=["Tên tiêu chí", "Mô tả", "Điểm min", "Điểm max"],
                     datatype=["str", "str", "number", "number"],
                     type="array",  # trả về list-of-lists (Gradio 6 mặc định "pandas")
-                    row_count=(4, "dynamic"),
-                    column_count=(4, "fixed"),
+                    row_count=4,     # 4 hàng ban đầu, cho phép thêm hàng (dynamic mặc định)
+                    column_count=4,  # 4 cột cố định
                     label="Tiêu chí",
                 )
                 with gr.Row():
