@@ -266,7 +266,7 @@ def build_ui() -> gr.Blocks:
     env_key = os.getenv("GEMINI_API_KEY", "")
     has_env_key = bool(env_key) and env_key != "dan_key_cua_ban_vao_day"
 
-    with gr.Blocks(title="Speak Grader — Chấm bài nói tiếng Anh bằng AI", theme=gr.themes.Soft()) as demo:
+    with gr.Blocks(title="Speak Grader — Chấm bài nói tiếng Anh bằng AI") as demo:
         gr.Markdown(
             "# 🎓 Speak Grader\n"
             "Chấm bài nói tiếng Anh qua video bằng Gemini AI: bảng điểm, nhận xét, "
@@ -345,7 +345,7 @@ def build_ui() -> gr.Blocks:
                     headers=["Tên tiêu chí", "Mô tả", "Điểm min", "Điểm max"],
                     datatype=["str", "str", "number", "number"],
                     row_count=(4, "dynamic"),
-                    col_count=(4, "fixed"),
+                    column_count=(4, "fixed"),
                     label="Tiêu chí",
                 )
                 with gr.Row():
@@ -389,7 +389,7 @@ def build_ui() -> gr.Blocks:
 
 def main() -> None:
     demo = build_ui()
-    demo.launch(server_name="127.0.0.1", inbrowser=True)
+    demo.launch(server_name="127.0.0.1", inbrowser=True, theme=gr.themes.Soft())
 
 
 if __name__ == "__main__":
