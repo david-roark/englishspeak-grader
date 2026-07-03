@@ -58,6 +58,25 @@ def all_rubrics() -> dict[str, Rubric]:
     return merged
 
 
+def default_rubrics_markdown() -> str:
+    """Bảng tra cứu (read-only) toàn bộ rubric mặc định đang dùng."""
+    blocks: list[str] = []
+    for r in DEFAULT_RUBRICS.values():
+        rows = "\n".join(
+            f"| {c.name} | {c.description} | {c.min_score:g}–{c.max_score:g} |"
+            for c in r.criteria
+        )
+        blocks.append(
+            f"### {r.name}\n"
+            f"`{r.key}` · Tổng tối đa: **{r.max_total:g}** điểm\n\n"
+            f"{r.description}\n\n"
+            + (f"*Thang điểm:* {r.scale_note}\n\n" if r.scale_note else "")
+            + "| Tiêu chí | Mô tả | Điểm |\n|---|---|---|\n"
+            + rows
+        )
+    return "\n\n---\n\n".join(blocks)
+
+
 def rubric_choices() -> list[tuple[str, str]]:
     choices = []
     for key, r in DEFAULT_RUBRICS.items():
@@ -384,7 +403,15 @@ def build_ui() -> gr.Blocks:
                 )
                 del_btn.click(delete_rubric, inputs=[del_key], outputs=[rubric_status, rubric_dd])
 
-            # ---- Tab 3: Lịch sử --------------------------------------------- #
+            # ---- Tab 3: Rubric mặc định (xem) ------------------------------- #
+            with gr.Tab("Rubric mặc định"):
+                gr.Markdown(
+                    "Các bộ tiêu chí có sẵn đang dùng để chấm (chỉ xem). "
+                    "Muốn thay đổi thì tạo bản riêng ở tab *Rubric tùy chỉnh*."
+                )
+                gr.Markdown(default_rubrics_markdown())
+
+            # ---- Tab 4: Lịch sử --------------------------------------------- #
             with gr.Tab("Lịch sử"):
                 gr.Markdown("Các lần chấm đã lưu (SQLite). Nhập ID để xem lại và tải Excel.")
                 hist_df = gr.Dataframe(
