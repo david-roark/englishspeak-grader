@@ -15,10 +15,12 @@ from core import database as db
 from core.export import export_to_excel
 from core.gemini_client import (
     ALL_MODELS,
+    DEFAULT_MEDIA_RESOLUTION,
     DEFAULT_MODEL,
     GeminiError,
     cleanup_file,
     grade_video,
+    list_models,
     make_client,
     upload_video,
 )
@@ -122,6 +124,7 @@ def run_grading(
     model: str,
     student_names_raw: str,
     extra_instructions: str,
+    media_resolution: str,
     progress: gr.Progress = gr.Progress(),
 ):
     """Trả về (markdown_kết_quả, đường_dẫn_excel, trạng_thái, state_result)."""
@@ -152,6 +155,7 @@ def run_grading(
             feedback_language=feedback_lang,
             student_names=names,
             extra_instructions=extra_instructions,
+            media_resolution=media_resolution,
             on_progress=lambda m: progress(0.7, desc=m),
         )
 
@@ -284,7 +288,19 @@ def build_ui() -> gr.Blocks:
             )
             model = gr.Dropdown(
                 label="Model", choices=ALL_MODELS, value=DEFAULT_MODEL, scale=2,
-                info="gemini-2.5-flash: miễn phí 500 lượt/ngày. Pro cho chất lượng cao (có thể cần billing).",
+                info="Flash Lite: nhiều lượt free nhất. Flash: chất lượng cao hơn, ít lượt hơn. "
+                     "Giới hạn free đổi theo tài khoản — xem tại aistudio.google.com.",
+            )
+            load_models_btn = gr.Button("🔄 Tải model", scale=1)
+
+        with gr.Row():
+            media_res = gr.Radio(
+                label="Độ phân giải video",
+                choices=[("Thấp — tiết kiệm token, an toàn free tier", "low"),
+                         ("Trung bình — chi tiết hơn, video dài dễ vượt giới hạn", "default"),
+                         ("Cao — chi tiết nhất, tốn token nhất", "high")],
+                value=DEFAULT_MEDIA_RESOLUTION,
+                info="Nên để Thấp cho video dài hoặc khi dùng free tier.",
             )
 
         with gr.Tabs():
@@ -326,7 +342,8 @@ def build_ui() -> gr.Blocks:
 
                 grade_btn.click(
                     run_grading,
-                    inputs=[api_key, video, rubric_dd, task_dd, lang_dd, model, names_tb, extra_tb],
+                    inputs=[api_key, video, rubric_dd, task_dd, lang_dd, model,
+                            names_tb, extra_tb, media_res],
                     outputs=[result_md, excel_file, status, result_state],
                 )
 
@@ -379,6 +396,19 @@ def build_ui() -> gr.Blocks:
                 refresh_btn.click(load_history, outputs=[hist_df])
                 view_btn.click(view_history_item, inputs=[hist_id], outputs=[hist_result, hist_excel])
                 demo.load(load_history, outputs=[hist_df])
+
+        def refresh_models(key: str):
+            """Lấy danh sách model động bằng key của người dùng."""
+            try:
+                client = make_client(key)
+            except GeminiError as e:
+                return gr.update(), f"⚠️ {e}"
+            models = list_models(client)
+            value = DEFAULT_MODEL if DEFAULT_MODEL in models else models[0]
+            return (gr.update(choices=models, value=value),
+                    f"✅ Đã tải {len(models)} model từ tài khoản của bạn.")
+
+        load_models_btn.click(refresh_models, inputs=[api_key], outputs=[model, status])
 
         gr.Markdown(
             "---\n*Chạy cục bộ trên máy bạn. API key và video không gửi đi đâu khác ngoài Google Gemini.*"

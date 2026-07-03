@@ -19,7 +19,14 @@ dùng **Google Gemini**. Chạy cục bộ trên máy bạn (Windows / macOS / L
 3. Bấm **Get API key** → **Create API key**.
 4. Copy key.
 
-Model mặc định `gemini-2.5-flash` **miễn phí tới 500 lượt chấm/ngày** — thừa cho nhu cầu cá nhân.
+Model mặc định là **Gemini Flash Lite** — dòng có nhiều lượt miễn phí nhất mỗi ngày,
+đủ để chấm cả lớp. Muốn nhận xét tinh tế hơn thì đổi sang **Flash** (chất lượng cao hơn
+nhưng ít lượt/ngày hơn). Giới hạn free thay đổi theo tài khoản — xem tại
+[AI Studio](https://aistudio.google.com) mục *Rate limits*. Bấm nút **🔄 Tải model** trong app
+để lấy đúng danh sách model tài khoản bạn đang có.
+
+Mẹo tiết kiệm quota: để **Độ phân giải video = Thấp** cho video dài (ít token hơn, tránh
+vượt giới hạn token/phút của free tier).
 
 ## Chạy app
 

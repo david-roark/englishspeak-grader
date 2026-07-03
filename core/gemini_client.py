@@ -17,22 +17,67 @@ from core.prompts import build_grading_prompt
 from core.rubrics import Rubric
 from core.schemas import AssessmentResult
 
-# Các model miễn phí tốt (Free tier, không cần thẻ). Xếp theo ưu tiên.
-FREE_TIER_MODELS = [
-    "gemini-2.5-flash",       # mặc định: mạnh, 500 RPD free, context 1M
-    "gemini-2.5-flash-lite",  # nhẹ/nhanh hơn, cũng 500 RPD free
-    "gemini-2.0-flash",       # dự phòng
+# Danh sách model TĨNH dùng làm fallback khi chưa nhập key / API lỗi.
+# ID API có thể sai theo thời gian -> ưu tiên lấy động qua list_models() (dưới đây).
+# Giới hạn free tier (RPD) thay đổi theo tài khoản; xem lại tại aistudio.google.com.
+FALLBACK_MODELS = [
+    "gemini-flash-lite-latest",  # mặc định: nhiều lượt nhất (Flash Lite ~500 RPD)
+    "gemini-flash-latest",       # Flash mới nhất, chất lượng cao hơn (ít lượt hơn)
+    "gemini-2.5-flash",          # Flash ổn định
+    "gemini-2.5-flash-lite",     # Flash Lite ổn định
+    "gemini-2.0-flash",          # dự phòng
 ]
 
-# Model chất lượng cao hơn (có thể cần billing -> để tùy chọn, không mặc định).
-PREMIUM_MODELS = ["gemini-2.5-pro"]
+DEFAULT_MODEL = FALLBACK_MODELS[0]
 
-ALL_MODELS = FREE_TIER_MODELS + PREMIUM_MODELS
-DEFAULT_MODEL = FREE_TIER_MODELS[0]
+# Tương thích ngược (mã cũ tham chiếu ALL_MODELS).
+ALL_MODELS = FALLBACK_MODELS
+
+# Độ phân giải media cho video. LOW (~100 token/giây) an toàn với free tier TPM;
+# MEDIUM (~300 token/giây) chi tiết hơn nhưng video dài dễ vượt giới hạn token/phút.
+MEDIA_RESOLUTIONS = {
+    "low": types.MediaResolution.MEDIA_RESOLUTION_LOW,
+    "default": types.MediaResolution.MEDIA_RESOLUTION_MEDIUM,
+    "high": types.MediaResolution.MEDIA_RESOLUTION_HIGH,
+}
+DEFAULT_MEDIA_RESOLUTION = "low"
 
 # Trạng thái file sau khi upload.
 _STATE_ACTIVE = "ACTIVE"
 _STATE_FAILED = "FAILED"
+
+
+def list_models(client: genai.Client) -> list[str]:
+    """Lấy danh sách model hỗ trợ generateContent từ API (bằng key của người dùng).
+
+    Trả về danh sách ID đã sắp xếp: nhóm Flash Lite trước (nhiều lượt free nhất),
+    rồi Flash, cuối cùng phần còn lại. Lỗi thì trả về FALLBACK_MODELS.
+    """
+    try:
+        ids: list[str] = []
+        for m in client.models.list():
+            actions = getattr(m, "supported_actions", None) or []
+            if actions and "generateContent" not in actions:
+                continue
+            name = (getattr(m, "name", "") or "").removeprefix("models/")
+            # Chỉ giữ model dòng gemini/gemma sinh văn bản.
+            if name.startswith(("gemini", "gemma")):
+                ids.append(name)
+        if not ids:
+            return list(FALLBACK_MODELS)
+
+        def rank(mid: str) -> tuple[int, str]:
+            if "flash-lite" in mid or "flash-8b" in mid:
+                return (0, mid)
+            if "flash" in mid:
+                return (1, mid)
+            if "pro" in mid:
+                return (3, mid)
+            return (2, mid)
+
+        return sorted(dict.fromkeys(ids), key=rank)
+    except Exception:  # noqa: BLE001 - offline / key lỗi -> dùng fallback
+        return list(FALLBACK_MODELS)
 
 
 class GeminiError(RuntimeError):
@@ -102,6 +147,7 @@ def grade_video(
     feedback_language: str = "vi",
     student_names: list[str] | None = None,
     extra_instructions: str = "",
+    media_resolution: str = DEFAULT_MEDIA_RESOLUTION,
     on_progress: Callable[[str], None] | None = None,
 ) -> AssessmentResult:
     """Gửi video + prompt + schema cho Gemini, nhận kết quả có cấu trúc."""
@@ -120,6 +166,7 @@ def grade_video(
         response_mime_type="application/json",
         response_schema=AssessmentResult,
         temperature=0.4,
+        media_resolution=MEDIA_RESOLUTIONS.get(media_resolution, MEDIA_RESOLUTIONS[DEFAULT_MEDIA_RESOLUTION]),
     )
 
     try:
