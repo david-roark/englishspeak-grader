@@ -76,23 +76,27 @@ def run_extract_mp3(video_path: str | None, preset: str):
     return f"✅ Đã tách xong: **{out.name}** ({size_mb:.1f} MB).", str(out)
 
 
+def rubric_markdown(r: Rubric) -> str:
+    """Render MỘT rubric thành khối markdown đầy đủ (tên, mã, tổng điểm, mô tả,
+    ghi chú thang điểm, bảng tiêu chí). Dùng chung cho rubric mặc định lẫn tùy chỉnh
+    để hiển thị nhất quán."""
+    rows = "\n".join(
+        f"| {c.name} | {c.description} | {c.min_score:g}–{c.max_score:g} |"
+        for c in r.criteria
+    )
+    return (
+        f"### {r.name}\n"
+        f"`{r.key}` · Tổng tối đa: **{r.max_total:g}** điểm\n\n"
+        f"{r.description}\n\n"
+        + (f"*Thang điểm:* {r.scale_note}\n\n" if r.scale_note else "")
+        + "| Tiêu chí | Mô tả | Điểm |\n|---|---|---|\n"
+        + rows
+    )
+
+
 def default_rubrics_markdown() -> str:
     """Bảng tra cứu (read-only) toàn bộ rubric mặc định đang dùng."""
-    blocks: list[str] = []
-    for r in DEFAULT_RUBRICS.values():
-        rows = "\n".join(
-            f"| {c.name} | {c.description} | {c.min_score:g}–{c.max_score:g} |"
-            for c in r.criteria
-        )
-        blocks.append(
-            f"### {r.name}\n"
-            f"`{r.key}` · Tổng tối đa: **{r.max_total:g}** điểm\n\n"
-            f"{r.description}\n\n"
-            + (f"*Thang điểm:* {r.scale_note}\n\n" if r.scale_note else "")
-            + "| Tiêu chí | Mô tả | Điểm |\n|---|---|---|\n"
-            + rows
-        )
-    return "\n\n---\n\n".join(blocks)
+    return "\n\n---\n\n".join(rubric_markdown(r) for r in DEFAULT_RUBRICS.values())
 
 
 def rubric_choices() -> list[tuple[str, str]]:
@@ -482,26 +486,25 @@ def build_ui() -> gr.Blocks:
                 @gr.render(inputs=rubric_refresh)
                 def _render_rubric_list(_tick):
                     gr.Markdown("#### Rubric mặc định (chỉ xem)")
-                    gr.Markdown(default_rubrics_markdown())
+                    for _r in DEFAULT_RUBRICS.values():
+                        gr.Markdown(rubric_markdown(_r))
                     gr.Markdown("#### Rubric tùy chỉnh")
                     customs = db.list_custom_rubrics()
                     if not customs:
                         gr.Markdown("_Chưa có rubric tùy chỉnh nào._")
                     for _data in customs:
                         _k = _data["key"]
-                        with gr.Row():
-                            gr.Markdown(
-                                f"**{_data['name']}** · mã `{_k}` · "
-                                f"{len(_data['criteria'])} tiêu chí"
-                            )
-                            _del_b = gr.Button("🗑️ Xóa", variant="stop", scale=0)
+                        # Hiển thị y hệt rubric mặc định (bảng tiêu chí đầy đủ), thêm nút xóa.
+                        gr.Markdown(rubric_markdown(rubric_from_dict(_data)))
+                        _del_b = gr.Button(f"🗑️ Xóa rubric «{_data['name']}»",
+                                           variant="stop", scale=0)
 
-                            # Closure giữ key + tick hiện tại; xóa xong bump tick -> vẽ lại.
-                            def _do_delete(k=_k, tick=_tick):
-                                _msg, dd = delete_rubric(k)
-                                return dd, tick + 1
+                        # Closure giữ key + tick hiện tại; xóa xong bump tick -> vẽ lại.
+                        def _do_delete(k=_k, tick=_tick):
+                            _msg, dd = delete_rubric(k)
+                            return dd, tick + 1
 
-                            _del_b.click(_do_delete, outputs=[rubric_dd, rubric_refresh])
+                        _del_b.click(_do_delete, outputs=[rubric_dd, rubric_refresh])
 
             # Lưu rubric -> cập nhật dropdown tab Chấm bài + vẽ lại Danh sách rubric.
             save_btn.click(
