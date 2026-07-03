@@ -47,11 +47,42 @@ _STATE_ACTIVE = "ACTIVE"
 _STATE_FAILED = "FAILED"
 
 
-def list_models(client: genai.Client) -> list[str]:
-    """Lấy danh sách model hỗ trợ generateContent từ API (bằng key của người dùng).
+# Từ khóa loại các model KHÔNG dùng để chấm video (không nhận video hoặc không
+# trả văn bản có cấu trúc): TTS, live/audio, sinh ảnh (Nano Banana), robotics,
+# embedding, computer-use, veo/imagen/lyria... Gemma (text-only) tự loại vì
+# không bắt đầu bằng "gemini".
+_EXCLUDE_KEYWORDS = (
+    "tts", "audio", "live", "image", "nano-banana", "robotics", "embedding",
+    "computer-use", "veo", "imagen", "lyria", "aqa", "learnlm",
+)
 
-    Trả về danh sách ID đã sắp xếp: nhóm Flash Lite trước (nhiều lượt free nhất),
-    rồi Flash, cuối cùng phần còn lại. Lỗi thì trả về FALLBACK_MODELS.
+
+def _is_gradable_model(model_id: str) -> bool:
+    """True nếu model dùng được để chấm video: dòng Gemini Flash/Pro đa phương thức."""
+    mid = model_id.lower().removeprefix("models/")
+    if not mid.startswith("gemini"):
+        return False
+    if any(k in mid for k in _EXCLUDE_KEYWORDS):
+        return False
+    return "flash" in mid or "pro" in mid
+
+
+def _rank_model(mid: str) -> tuple[int, str]:
+    """Sắp xếp: Flash Lite trước (nhiều lượt free nhất), rồi Flash, cuối là Pro."""
+    if "flash-lite" in mid or "flash-8b" in mid:
+        return (0, mid)
+    if "flash" in mid:
+        return (1, mid)
+    if "pro" in mid:
+        return (2, mid)
+    return (3, mid)
+
+
+def list_models(client: genai.Client) -> list[str]:
+    """Lấy danh sách model chấm video được từ API (bằng key của người dùng).
+
+    Chỉ giữ dòng Gemini Flash/Pro đa phương thức, bỏ TTS/live/ảnh/robotics/...
+    Sắp Flash Lite trước. Lỗi hoặc không có kết quả thì trả về FALLBACK_MODELS.
     """
     try:
         ids: list[str] = []
@@ -60,22 +91,11 @@ def list_models(client: genai.Client) -> list[str]:
             if actions and "generateContent" not in actions:
                 continue
             name = (getattr(m, "name", "") or "").removeprefix("models/")
-            # Chỉ giữ model dòng gemini/gemma sinh văn bản.
-            if name.startswith(("gemini", "gemma")):
+            if _is_gradable_model(name):
                 ids.append(name)
         if not ids:
             return list(FALLBACK_MODELS)
-
-        def rank(mid: str) -> tuple[int, str]:
-            if "flash-lite" in mid or "flash-8b" in mid:
-                return (0, mid)
-            if "flash" in mid:
-                return (1, mid)
-            if "pro" in mid:
-                return (3, mid)
-            return (2, mid)
-
-        return sorted(dict.fromkeys(ids), key=rank)
+        return sorted(dict.fromkeys(ids), key=_rank_model)
     except Exception:  # noqa: BLE001 - offline / key lỗi -> dùng fallback
         return list(FALLBACK_MODELS)
 
