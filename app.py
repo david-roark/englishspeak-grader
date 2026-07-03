@@ -314,8 +314,7 @@ def build_ui() -> gr.Blocks:
         gr.Markdown(
             "Rate limit (RPM/TPM/RPD) khác nhau theo model và theo tài khoản, không lấy được "
             "qua API — xem số thật của bạn tại "
-            "[AI Studio · Rate limits](https://aistudio.google.com/app/plan_information) hoặc "
-            "[tài liệu Gemini](https://ai.google.dev/gemini-api/docs/rate-limits)."
+            "[AI Studio · Rate limits](https://aistudio.google.com/app/rate-limit)."
         )
 
         with gr.Row():
