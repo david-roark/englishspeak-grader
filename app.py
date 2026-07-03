@@ -9,6 +9,10 @@ import json
 import os
 import time
 
+# Tắt telemetry của Gradio (phải đặt TRƯỚC khi import gradio) để không ping mạng
+# lúc khởi động/thoát — giúp Ctrl+C tắt app nhanh hơn.
+os.environ.setdefault("GRADIO_ANALYTICS_ENABLED", "False")
+
 import gradio as gr
 from dotenv import load_dotenv
 
