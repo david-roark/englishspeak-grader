@@ -549,6 +549,7 @@ def build_ui() -> gr.Blocks:
 
 def main() -> None:
     demo = build_ui()
+    # Gradio 6: theme truyền ở launch() (không phải Blocks) — xem UserWarning nếu đặt sai.
     demo.launch(server_name="127.0.0.1", inbrowser=True, theme=gr.themes.Soft())
 
 
