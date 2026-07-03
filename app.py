@@ -319,7 +319,7 @@ def build_ui() -> gr.Blocks:
 
         with gr.Row():
             media_res = gr.Radio(
-                label="Độ phân giải video",
+                label="Cấp độ quan sát (Chỉ hình ảnh - Audio luôn đầy đủ)",
                 choices=[("Thấp — tiết kiệm token, an toàn free tier", "low"),
                          ("Trung bình — chi tiết hơn, video dài dễ vượt giới hạn", "default"),
                          ("Cao — chi tiết nhất, tốn token nhất", "high")],
