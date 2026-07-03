@@ -12,6 +12,7 @@ import gradio as gr
 from dotenv import load_dotenv
 
 from core import database as db
+from core.audio import DEFAULT_MP3_PRESET, MP3_PRESETS, AudioError, extract_mp3
 from core.export import export_to_excel
 from core.gemini_client import (
     ALL_MODELS,
@@ -56,6 +57,18 @@ def all_rubrics() -> dict[str, Rubric]:
     for data in db.list_custom_rubrics():
         merged[data["key"]] = rubric_from_dict(data)
     return merged
+
+
+def run_extract_mp3(video_path: str | None, preset: str):
+    """Callback tab Tách MP3: trích audio từ video ra MP3 theo preset."""
+    if not video_path:
+        return "⚠️ Hãy chọn video trước.", None
+    try:
+        out = extract_mp3(video_path, preset=preset)
+    except AudioError as e:
+        return f"⚠️ {e}", None
+    size_mb = out.stat().st_size / (1024 * 1024)
+    return f"✅ Đã tách xong: **{out.name}** ({size_mb:.1f} MB).", str(out)
 
 
 def default_rubrics_markdown() -> str:
@@ -410,7 +423,27 @@ def build_ui() -> gr.Blocks:
                 )
                 gr.Markdown(default_rubrics_markdown())
 
-            # ---- Tab 4: Lịch sử --------------------------------------------- #
+            # ---- Tab 4: Tách MP3 -------------------------------------------- #
+            with gr.Tab("Tách MP3"):
+                gr.Markdown(
+                    "Trích âm thanh từ video ra file MP3 để lưu trữ hoặc nghe lại. "
+                    "Các preset tối ưu cho giọng nói (mono gọn mà vẫn rõ lời)."
+                )
+                mp3_video = gr.Video(label="Video nguồn")
+                mp3_preset = gr.Dropdown(
+                    label="Chất lượng",
+                    choices=[(p.label, p.key) for p in MP3_PRESETS.values()],
+                    value=DEFAULT_MP3_PRESET,
+                    info="Nhỏ gọn: file nhẹ nhất. Cân bằng: mặc định. Cao: giữ stereo, file to hơn.",
+                )
+                mp3_btn = gr.Button("🎵 Tách MP3", variant="primary")
+                mp3_status = gr.Markdown()
+                mp3_file = gr.File(label="File MP3")
+
+                mp3_btn.click(run_extract_mp3, inputs=[mp3_video, mp3_preset],
+                              outputs=[mp3_status, mp3_file])
+
+            # ---- Tab 5: Lịch sử --------------------------------------------- #
             with gr.Tab("Lịch sử"):
                 gr.Markdown("Các lần chấm đã lưu (SQLite). Nhập ID để xem lại và tải Excel.")
                 hist_df = gr.Dataframe(

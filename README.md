@@ -13,6 +13,7 @@ dùng **Google Gemini**. Chạy cục bộ trên máy bạn (Windows / macOS / L
   "Học sinh 1/2..." để giáo viên gán tên sau.
 - Nhận xét bằng **tiếng Việt** (mặc định), tiếng Anh hoặc song ngữ.
 - Lưu kết quả vào **SQLite** và **xuất Excel**.
+- **Tách MP3** từ video (3 mức chất lượng tối ưu cho giọng nói) để lưu trữ hoặc nghe lại.
 
 ## Lấy API key miễn phí (không cần thẻ, không mua gói)
 
@@ -115,7 +116,8 @@ speak-grader/
 │   ├── prompts.py        # Dựng prompt
 │   ├── rubrics.py        # Rubric mặc định + tùy chỉnh
 │   ├── database.py       # SQLite
-│   └── export.py         # Xuất Excel
+│   ├── export.py         # Xuất Excel
+│   └── audio.py          # Tách MP3 (ffmpeg đóng gói qua imageio-ffmpeg)
 ├── data/               # SQLite (tự tạo)
 ├── exports/            # Excel kết quả
 ├── run.sh              # Khởi động (Linux)
