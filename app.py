@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 
 import gradio as gr
 from dotenv import load_dotenv
@@ -147,6 +148,46 @@ def format_result_markdown(result: AssessmentResult) -> str:
 # Hành động chính: chấm bài
 # --------------------------------------------------------------------------- #
 
+# Gemini giữ file đã upload 48h. Dùng biên an toàn 47h để tránh dùng file sắp hết hạn.
+_UPLOAD_TTL_SECONDS = 47 * 3600
+
+
+def get_or_upload(client, video_path: str, cache, progress):
+    """Tái dùng video đã upload nếu cùng đường dẫn và còn hạn; nếu không thì upload mới.
+
+    cache: dict {"video_path", "uploaded", "ts"} hoặc None.
+    Trả về (uploaded_file, new_cache).
+    """
+    now = time.time()
+
+    # Cache hợp lệ: cùng video, chưa hết hạn, và Gemini xác nhận file còn sống.
+    if (
+        cache
+        and cache.get("video_path") == video_path
+        and cache.get("uploaded") is not None
+        and (now - cache.get("ts", 0)) < _UPLOAD_TTL_SECONDS
+    ):
+        try:
+            name = cache["uploaded"].name
+            fresh = client.files.get(name=name)
+            state_name = getattr(fresh.state, "name", fresh.state)
+            if state_name == "ACTIVE":
+                progress(0.5, desc="Dùng lại video đã tải (không upload lại)...")
+                return fresh, {"video_path": video_path, "uploaded": fresh, "ts": cache["ts"]}
+        except Exception:  # noqa: BLE001 - file hết hạn/không còn -> upload lại
+            pass
+
+    # Đổi video khác: dọn file cũ trên Gemini trước khi upload mới.
+    if cache and cache.get("uploaded") is not None and cache.get("video_path") != video_path:
+        cleanup_file(client, cache["uploaded"])
+
+    uploaded = upload_video(
+        client, video_path,
+        on_progress=lambda m: progress(0.3, desc=m),
+    )
+    return uploaded, {"video_path": video_path, "uploaded": uploaded, "ts": now}
+
+
 def run_grading(
     api_key: str,
     video_path: str,
@@ -157,16 +198,17 @@ def run_grading(
     student_names_raw: str,
     extra_instructions: str,
     media_resolution: str,
+    upload_cache,
     progress: gr.Progress = gr.Progress(),
 ):
-    """Trả về (markdown_kết_quả, đường_dẫn_excel, trạng_thái, state_result)."""
+    """Trả về (markdown_kết_quả, đường_dẫn_excel, trạng_thái, state_result, upload_cache)."""
     if not video_path:
-        return "⚠️ Chưa chọn video.", None, "Chưa chấm.", None
+        return "⚠️ Chưa chọn video.", None, "Chưa chấm.", None, upload_cache
 
     rubrics = all_rubrics()
     rubric = rubrics.get(rubric_key)
     if rubric is None:
-        return "⚠️ Chưa chọn rubric hợp lệ.", None, "Chưa chấm.", None
+        return "⚠️ Chưa chọn rubric hợp lệ.", None, "Chưa chấm.", None, upload_cache
 
     names = [n.strip() for n in student_names_raw.split(",") if n.strip()] or None
 
@@ -174,10 +216,7 @@ def run_grading(
         progress(0.05, desc="Kết nối Gemini...")
         client = make_client(api_key)
 
-        uploaded = upload_video(
-            client, video_path,
-            on_progress=lambda m: progress(0.3, desc=m),
-        )
+        uploaded, upload_cache = get_or_upload(client, video_path, upload_cache, progress)
 
         progress(0.6, desc="Đang chấm điểm...")
         result = grade_video(
@@ -191,8 +230,7 @@ def run_grading(
             on_progress=lambda m: progress(0.7, desc=m),
         )
 
-        cleanup_file(client, uploaded)
-
+        # Không xóa file ngay: giữ lại để chấm lại nhanh khi đổi rubric/loại/ngôn ngữ.
         progress(0.9, desc="Lưu kết quả & xuất Excel...")
         video_name = os.path.basename(video_path)
         db.save_assessment(
@@ -208,13 +246,17 @@ def run_grading(
 
         progress(1.0, desc="Xong!")
         md = format_result_markdown(result)
-        status = f"✅ Đã chấm {len(result.students)} học sinh. Excel: {xlsx.name}"
-        return md, str(xlsx), status, result.model_dump_json()
+        status = (
+            f"✅ Đã chấm {len(result.students)} học sinh. Excel: {xlsx.name}\n\n"
+            "💡 Đổi rubric / loại bài / ngôn ngữ rồi bấm *Chấm điểm* lại — sẽ dùng lại "
+            "video đã tải, không phải upload lại (nhanh hơn nhiều)."
+        )
+        return md, str(xlsx), status, result.model_dump_json(), upload_cache
 
     except GeminiError as e:
-        return f"❌ {e}", None, "Lỗi.", None
+        return f"❌ {e}", None, "Lỗi.", None, upload_cache
     except Exception as e:  # noqa: BLE001
-        return f"❌ Lỗi không mong muốn: {e}", None, "Lỗi.", None
+        return f"❌ Lỗi không mong muốn: {e}", None, "Lỗi.", None, upload_cache
 
 
 # --------------------------------------------------------------------------- #
@@ -376,12 +418,13 @@ def build_ui() -> gr.Blocks:
                         result_md = gr.Markdown()
                         excel_file = gr.File(label="Tải file Excel kết quả")
                         result_state = gr.State()
+                        upload_cache = gr.State()  # giữ video đã upload để chấm lại nhanh
 
                 grade_btn.click(
                     run_grading,
                     inputs=[api_key, video, rubric_dd, task_dd, lang_dd, model,
-                            names_tb, extra_tb, media_res],
-                    outputs=[result_md, excel_file, status, result_state],
+                            names_tb, extra_tb, media_res, upload_cache],
+                    outputs=[result_md, excel_file, status, result_state, upload_cache],
                 )
 
             # ---- Tab 2: Rubric tùy chỉnh ------------------------------------ #
