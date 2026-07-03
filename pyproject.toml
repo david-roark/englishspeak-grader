@@ -1,0 +1,23 @@
+[project]
+name = "englishspeak-grader"
+version = "0.1.0"
+description = "App AI (Gemini) hỗ trợ giáo viên tiếng Anh chấm bài nói qua video: bảng điểm, nhận xét, gợi ý cải thiện theo rubric quốc tế + rubric tùy chỉnh."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "google-genai>=1.0.0",
+    "gradio>=4.44.0",
+    "pydantic>=2.7.0",
+    "openpyxl>=3.1.0",
+    "python-dotenv>=1.0.0",
+]
+
+[tool.uv]
+# uv sẽ tự tạo venv và cài đúng phiên bản deps ở trên khi chạy `uv run`.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["core"]

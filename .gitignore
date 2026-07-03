@@ -1,0 +1,24 @@
+# Môi trường & bí mật
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Dữ liệu người dùng (không commit)
+data/*.db
+data/*.db-journal
+exports/*.xlsx
+uploads/
+
+# uv / build
+.uv/
+dist/
+build/
+*.egg-info/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
