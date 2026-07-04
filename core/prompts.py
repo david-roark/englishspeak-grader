@@ -64,8 +64,8 @@ def build_grading_prompt(
         "- Xem cả HÌNH ẢNH và ÂM THANH (phát âm, ngữ điệu, cử chỉ, sự tự tin).",
         "- Chấm điểm CHÍNH XÁC theo từng tiêu chí của rubric, không tự thêm/bớt tiêu chí.",
         "- Với mỗi học sinh: nêu điểm mạnh, điểm yếu, gợi ý cải thiện cụ thể và hướng luyện tập.",
-        "- Đưa dẫn chứng kèm mốc thời gian (timestamp) cho các nhận xét quan trọng.",
-        "- Chấm công bằng theo trình độ; giải thích ngắn gọn lý do mỗi mức điểm.",
+        "- Đưa dẫn chứng kèm mốc thời gian (timestamp) cho các nhận xét.",
+        "- Chấm công bằng theo trình độ; giải thích chi tiết lý do mỗi mức điểm.",
         f"- NGÔN NGỮ NHẬN XÉT: {lang_instr}",
         "- Tên tiêu chí trong kết quả phải GIỮ NGUYÊN như trong rubric.",
     ]
