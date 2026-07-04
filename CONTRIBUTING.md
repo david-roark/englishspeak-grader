@@ -11,8 +11,8 @@ Tài liệu này sẽ hướng dẫn bạn cách thiết lập môi trường ph
 1. **Fork** repository này về tài khoản GitHub của bạn.
 2. **Clone** repository đã fork về máy cá nhân:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/speak-grader.git
-   cd speak-grader
+   git clone https://github.com/YOUR_USERNAME/englishspeak-grader.git
+   cd englishspeak-grader
    ```
 3. Tạo một branch mới cho tính năng hoặc sửa lỗi của bạn:
    ```bash

@@ -108,7 +108,7 @@ Chạy lại các lần sau rất nhanh vì thư viện đã có sẵn.
 ## Cấu trúc
 
 ```
-speak-grader/
+englishspeak-grader/
 ├── app.py              # Giao diện Gradio
 ├── core/
 │   ├── gemini_client.py  # Upload File API + gọi chấm điểm
