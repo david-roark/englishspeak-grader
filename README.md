@@ -1,4 +1,4 @@
-# 🎓 Speak Grader
+# 🎓 EnglishSpeak Grader
 
 App AI hỗ trợ **giáo viên tiếng Anh chấm bài nói qua video**: chấm điểm theo rubric,
 nhận xét điểm mạnh/điểm yếu, gợi ý cải thiện và hướng luyện tập cho từng học sinh —
@@ -63,7 +63,7 @@ Chạy lại các lần sau rất nhanh vì thư viện đã có sẵn.
 
 1. Chuột phải `run.bat` → **Send to** → **Desktop (create shortcut)**.
 2. Chuột phải shortcut vừa tạo → **Properties** → **Change Icon...** → **Browse** → chọn `icon.ico` → OK.
-3. (Tùy chọn) Đổi tên shortcut thành _Speak Grader_. Có thể kéo vào thanh Taskbar hoặc menu Start để ghim.
+3. (Tùy chọn) Đổi tên shortcut thành _EnglishSpeak Grader_. Có thể kéo vào thanh Taskbar hoặc menu Start để ghim.
 
 **macOS**
 
@@ -76,7 +76,7 @@ Chạy lại các lần sau rất nhanh vì thư viện đã có sẵn.
    ```ini
    [Desktop Entry]
    Type=Application
-   Name=Speak Grader
+   Name=EnglishSpeak Grader
    Comment=Chấm bài nói tiếng Anh bằng AI
    Exec=<ĐƯỜNG_DẪN>/run.sh
    Icon=<ĐƯỜNG_DẪN>/icon.png
