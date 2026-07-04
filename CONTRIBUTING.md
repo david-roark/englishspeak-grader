@@ -11,7 +11,7 @@ Tài liệu này sẽ hướng dẫn bạn cách thiết lập môi trường ph
 1. **Fork** repository này về tài khoản GitHub của bạn.
 2. **Clone** repository đã fork về máy cá nhân:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/englishspeak-grader.git
+   git clone https://github.com/david-roark/englishspeak-grader.git
    cd englishspeak-grader
    ```
 3. Tạo một branch mới cho tính năng hoặc sửa lỗi của bạn:
@@ -52,11 +52,15 @@ Dự án sử dụng công cụ **`uv`** để quản lý môi trường ảo (v
    ```
 
 ### Chạy thử ứng dụng ở chế độ Development
+
 Sau khi đã thiết lập môi trường ảo và cài đặt đầy đủ thư viện, bạn có thể khởi chạy ứng dụng Gradio bằng lệnh:
+
 ```bash
 uv run python app.py
 ```
+
 Hoặc sử dụng các file script có sẵn tùy thuộc vào hệ điều hành của bạn:
+
 - Windows: chạy `run.bat`
 - macOS: chạy `run.command`
 - Linux: chạy `./run.sh`
@@ -68,6 +72,7 @@ Hoặc sử dụng các file script có sẵn tùy thuộc vào hệ điều hà
 Trước khi commit bất kỳ thay đổi nào hoặc tạo Pull Request, vui lòng chạy toàn bộ bộ kiểm thử để đảm bảo mã của bạn không làm hỏng các tính năng hiện tại.
 
 Chạy lệnh kiểm thử với `pytest`:
+
 ```bash
 uv run pytest
 ```
@@ -81,6 +86,7 @@ Nếu bạn viết thêm tính năng mới hoặc sửa lỗi phức tạp, vui 
 Để mã nguồn dự án luôn nhất quán và dễ bảo trì, vui lòng tuân thủ các quy tắc sau:
 
 ### 1. Code Python
+
 - **Format & Linting**: Khuyên dùng [Ruff](https://github.com/astral-sh/ruff) để tự động định dạng và kiểm tra lỗi cú pháp.
 - **Tiêu chuẩn**: Tuân thủ hướng dẫn phong cách code của **PEP 8**.
 - **Quy tắc đặt tên**:
@@ -89,7 +95,9 @@ Nếu bạn viết thêm tính năng mới hoặc sửa lỗi phức tạp, vui 
   - Hằng số: viết hoa hoàn toàn `UPPER_CASE` (ví dụ: `DEFAULT_MODEL`, `MAX_RETRIES`).
 
 ### 2. Định dạng file Markdown (`.md`)
+
 Khi bạn viết tài liệu hoặc cập nhật các hướng dẫn (như file `README.md` hay `CONTRIBUTING.md` này):
+
 - **Độ dài dòng**: Xuống dòng vật lý (wrap lines) sau mỗi khoảng **100 ký tự**. Việc này giúp cải thiện trải nghiệm đọc code diff trên Git (không phải cuộn ngang để đọc nội dung dài).
 - **Cấu trúc Tiêu đề**:
   - Chỉ sử dụng duy nhất một tiêu đề chính cấp 1 (`# Title`) ở đầu file.
@@ -98,10 +106,12 @@ Khi bạn viết tài liệu hoặc cập nhật các hướng dẫn (như file 
 - **Khối Code**: Luôn chỉ định ngôn ngữ lập trình cho khối mã (ví dụ: ` ```python `, ` ```bash `, ` ```markdown `) để kích hoạt syntax highlighting.
 
 ### 3. Quy chuẩn viết Commit Message
+
 Dự án khuyến khích sử dụng chuẩn **Conventional Commits**. Mỗi commit message nên có dạng:
 `<type>: <description>`
 
 Các `<type>` phổ biến:
+
 - `feat`: Thêm tính năng mới.
 - `fix`: Sửa lỗi.
 - `docs`: Cập nhật tài liệu hoặc chỉnh sửa file `.md`.
@@ -110,7 +120,7 @@ Các `<type>` phổ biến:
 - `test`: Thêm hoặc sửa đổi các bộ test case.
 - `chore`: Các công việc bảo trì, cập nhật cấu hình build, dependencies...
 
-*Ví dụ:* `docs: bổ sung quy chuẩn markdown vào contributing guide`
+_Ví dụ:_ `docs: bổ sung quy chuẩn markdown vào contributing guide`
 
 ---
 
