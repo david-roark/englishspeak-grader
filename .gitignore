@@ -10,6 +10,9 @@ data/*.db
 data/*.db-journal
 exports/*.xlsx
 exports/*.mp3
+exports/*.mp4
+exports/*.avi
+exports/*.mov
 uploads/
 
 # uv / build

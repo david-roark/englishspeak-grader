@@ -102,6 +102,27 @@ def test_run_extract_mp3_thiếu_video():
     assert out is None
 
 
+# --- run_compression & handle_video_change (nhánh cảnh báo) --------------- #
+
+def test_run_compression_thiếu_video():
+    out, status = app.run_compression(None, "balanced", 0.0, None)
+    assert out is None
+    assert status.startswith("⚠️")
+
+
+def test_handle_video_change_rỗng():
+    msg, size, orig_path = app.handle_video_change(None, 0.0, None)
+    assert "Chưa tải lên" in msg
+    assert size == 0.0
+    assert orig_path is None
+
+
+def test_run_standalone_compression_thiếu_video():
+    msg, out = app.run_standalone_compression(None, "balanced")
+    assert msg.startswith("⚠️")
+    assert out is None
+
+
 # --- run_grading (nhánh guard, không gọi Gemini) ------------------------- #
 
 def test_run_grading_thiếu_video():
@@ -137,5 +158,6 @@ def test_các_nút_gắn_đúng_callback(monkeypatch):
     for expected in {
         "run_grading", "save_rubric",
         "run_extract_mp3", "load_history", "view_history_item", "refresh_models",
+        "run_compression", "handle_video_change", "run_standalone_compression",
     }:
         assert expected in wired, f"Callback '{expected}' chưa được gắn vào UI"

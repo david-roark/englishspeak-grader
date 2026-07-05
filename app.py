@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from pathlib import Path
 
 # Tắt telemetry của Gradio (phải đặt TRƯỚC khi import gradio) để không ping mạng
 # lúc khởi động/thoát — giúp Ctrl+C tắt app nhanh hơn.
@@ -18,6 +19,7 @@ from dotenv import load_dotenv
 
 from core import database as db
 from core.audio import DEFAULT_MP3_PRESET, MP3_PRESETS, AudioError, extract_mp3
+from core.video import VIDEO_PRESETS, VideoError, compress_video
 from core.export import export_to_excel
 from core.gemini_client import (
     ALL_MODELS,
@@ -74,6 +76,86 @@ def run_extract_mp3(video_path: str | None, preset: str):
         return f"⚠️ {e}", None
     size_mb = out.stat().st_size / (1024 * 1024)
     return f"✅ Đã tách xong: **{out.name}** ({size_mb:.1f} MB).", str(out)
+
+
+def handle_video_change(
+    video_path: str | None, current_orig_size: float, current_orig_path: str | None
+) -> tuple[str, float, str | None]:
+    """Cập nhật thông tin dung lượng video khi có thay đổi."""
+    if not video_path:
+        return "📁 Chưa tải lên video.", 0.0, None
+
+    path = Path(video_path)
+    if not path.exists():
+        return "📁 Chưa tải lên video.", 0.0, None
+
+    size_mb = path.stat().st_size / (1024 * 1024)
+    is_compressed = "_compressed" in path.name
+
+    if not is_compressed:
+        # File mới tải lên
+        msg = f"📁 **Dung lượng gốc:** {size_mb:.2f} MB"
+        return msg, size_mb, video_path
+    else:
+        # File đã qua nén. Giữ nguyên size gốc và path gốc đã lưu.
+        if current_orig_size > 0:
+            pct = (1 - (size_mb / current_orig_size)) * 100
+            msg = f"📁 **Dung lượng hiện tại:** {size_mb:.2f} MB *(Đã giảm {pct:.1f}% từ {current_orig_size:.2f} MB)*"
+            return msg, current_orig_size, current_orig_path
+        else:
+            msg = f"📁 **Dung lượng hiện tại:** {size_mb:.2f} MB *(Đã nén)*"
+            return msg, size_mb, current_orig_path
+
+
+def run_compression(
+    video_path: str | None,
+    preset: str,
+    orig_size: float,
+    orig_path: str | None,
+    progress: gr.Progress = gr.Progress(),
+):
+    """Thực hiện nén video bằng ffmpeg từ file gốc."""
+    # Ưu tiên dùng đường dẫn gốc chưa nén nếu có
+    source_path = orig_path or video_path
+    if not source_path:
+        return None, "⚠️ Hãy chọn video trước."
+
+    try:
+        progress(0.1, desc="Đang chuẩn bị nén video...")
+        out_path = compress_video(source_path, preset=preset)
+        progress(1.0, desc="Nén video xong!")
+        size_mb = out_path.stat().st_size / (1024 * 1024)
+
+        actual_orig_size = orig_size
+        if actual_orig_size <= 0:
+            actual_orig_size = Path(source_path).stat().st_size / (1024 * 1024)
+
+        orig_str = f" từ {actual_orig_size:.2f} MB" if actual_orig_size > 0 else ""
+        status_msg = f"✅ Đã nén video xong: **{out_path.name}** ({size_mb:.2f} MB{orig_str}). Sẵn sàng để chấm bài!"
+        return str(out_path), status_msg
+    except VideoError as e:
+        return video_path, f"⚠️ {e}"
+    except Exception as e:
+        return video_path, f"⚠️ Lỗi nén video: {e}"
+
+
+def run_standalone_compression(video_path: str | None, preset: str, progress: gr.Progress = gr.Progress()):
+    """Callback tab Xử lý Video/Audio: nén video độc lập và cho phép tải về."""
+    if not video_path:
+        return "⚠️ Hãy chọn video trước.", None
+    try:
+        progress(0.1, desc="Đang chuẩn bị nén video...")
+        out_path = compress_video(video_path, preset=preset)
+        progress(1.0, desc="Nén video xong!")
+        size_mb = out_path.stat().st_size / (1024 * 1024)
+        orig_size = Path(video_path).stat().st_size / (1024 * 1024)
+        pct = (1 - (size_mb / orig_size)) * 100
+        msg = f"✅ Đã nén xong: **{out_path.name}** ({size_mb:.2f} MB - Giảm {pct:.1f}% từ {orig_size:.2f} MB)."
+        return msg, str(out_path)
+    except VideoError as e:
+        return f"⚠️ {e}", None
+    except Exception as e:
+        return f"⚠️ Lỗi nén video: {e}", None
 
 
 def rubric_markdown(r: Rubric) -> str:
@@ -413,6 +495,23 @@ def build_ui() -> gr.Blocks:
                 with gr.Row():
                     with gr.Column(scale=1):
                         video = gr.Video(label="Video bài nói của học sinh")
+                        video_info = gr.Markdown("📁 Chưa tải lên video.")
+
+                        with gr.Accordion("📉 Nén video (Giảm dung lượng)", open=False):
+                            gr.Markdown(
+                                "Nén giảm dung lượng video bằng ffmpeg trước khi upload lên Gemini "
+                                "để tiết kiệm băng thông và hạn chế lỗi vượt giới hạn (TPM)."
+                            )
+                            compress_preset = gr.Dropdown(
+                                label="Chất lượng nén",
+                                choices=[(p.label, p.key) for p in VIDEO_PRESETS.values()],
+                                value="balanced",
+                            )
+                            compress_btn = gr.Button("📉 Thực hiện nén video", variant="secondary")
+
+                        original_size_mb = gr.State(value=0.0)
+                        original_video_path = gr.State(value=None)
+
                         rubric_dd = gr.Dropdown(
                             label="Rubric (tiêu chuẩn chấm)",
                             choices=rubric_choices(),
@@ -450,6 +549,18 @@ def build_ui() -> gr.Blocks:
                     inputs=[api_key, video, rubric_dd, task_dd, lang_dd, model,
                             names_tb, extra_tb, media_res, upload_cache],
                     outputs=[result_md, excel_file, status, result_state, upload_cache],
+                )
+
+                video.change(
+                    handle_video_change,
+                    inputs=[video, original_size_mb, original_video_path],
+                    outputs=[video_info, original_size_mb, original_video_path],
+                )
+
+                compress_btn.click(
+                    run_compression,
+                    inputs=[video, compress_preset, original_size_mb, original_video_path],
+                    outputs=[video, status],
                 )
 
             # ---- Tab 2: Rubric tùy chỉnh ------------------------------------ #
@@ -513,25 +624,48 @@ def build_ui() -> gr.Blocks:
                 outputs=[rubric_status, rubric_dd],
             ).then(lambda t: t + 1, inputs=rubric_refresh, outputs=rubric_refresh)
 
-            # ---- Tab 4: Tách MP3 -------------------------------------------- #
-            with gr.Tab("Tách MP3"):
+            # ---- Tab 4: Xử lý Video/Audio -------------------------------------------- #
+            with gr.Tab("Xử lý Video/Audio"):
                 gr.Markdown(
-                    "Trích âm thanh từ video ra file MP3 để lưu trữ hoặc nghe lại. "
-                    "Các preset tối ưu cho giọng nói (mono gọn mà vẫn rõ lời)."
+                    "Các công cụ nén dung lượng video hoặc trích xuất âm thanh từ video."
                 )
-                mp3_video = gr.Video(label="Video nguồn")
-                mp3_preset = gr.Dropdown(
-                    label="Chất lượng",
-                    choices=[(p.label, p.key) for p in MP3_PRESETS.values()],
-                    value=DEFAULT_MP3_PRESET,
-                    info="Nhỏ gọn: file nhẹ nhất. Cân bằng: mặc định. Cao: giữ stereo, file to hơn.",
-                )
-                mp3_btn = gr.Button("🎵 Tách MP3", variant="primary")
-                mp3_status = gr.Markdown()
-                mp3_file = gr.File(label="File MP3")
+                with gr.Row():
+                    with gr.Column():
+                        gr.Markdown("### 📉 Nén video (Giảm dung lượng)")
+                        compress_video_in = gr.Video(label="Video nguồn cần nén")
+                        compress_preset_in = gr.Dropdown(
+                            label="Chất lượng nén",
+                            choices=[(p.label, p.key) for p in VIDEO_PRESETS.values()],
+                            value="balanced",
+                        )
+                        compress_video_btn = gr.Button("📉 Thực hiện nén video", variant="primary")
+                        compress_video_status = gr.Markdown("Sẵn sàng.")
+                        compress_video_out = gr.File(label="Tải video nén về máy")
 
-                mp3_btn.click(run_extract_mp3, inputs=[mp3_video, mp3_preset],
-                              outputs=[mp3_status, mp3_file])
+                    with gr.Column():
+                        gr.Markdown("### 🎵 Tách âm thanh MP3")
+                        mp3_video = gr.Video(label="Video nguồn cần tách")
+                        mp3_preset = gr.Dropdown(
+                            label="Chất lượng âm thanh",
+                            choices=[(p.label, p.key) for p in MP3_PRESETS.values()],
+                            value=DEFAULT_MP3_PRESET,
+                            info="Nhỏ gọn: file nhẹ nhất. Cân bằng: mặc định. Cao: giữ stereo, file to hơn.",
+                        )
+                        mp3_btn = gr.Button("🎵 Tách MP3", variant="primary")
+                        mp3_status = gr.Markdown("Sẵn sàng.")
+                        mp3_file = gr.File(label="Tải file MP3 về máy")
+
+                compress_video_btn.click(
+                    run_standalone_compression,
+                    inputs=[compress_video_in, compress_preset_in],
+                    outputs=[compress_video_status, compress_video_out],
+                )
+
+                mp3_btn.click(
+                    run_extract_mp3,
+                    inputs=[mp3_video, mp3_preset],
+                    outputs=[mp3_status, mp3_file],
+                )
 
             # ---- Tab 5: Lịch sử --------------------------------------------- #
             with gr.Tab("Lịch sử"):
